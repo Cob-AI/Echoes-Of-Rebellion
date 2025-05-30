@@ -7,6 +7,7 @@ import ChoiceButton from './components/ChoiceButton';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorDisplay from './components/ErrorDisplay';
 import DeveloperFooter from './components/DeveloperFooter';
+import ApiKeyInput from './components/ApiKeyInput';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.START_SCREEN);
@@ -32,30 +33,33 @@ const App: React.FC = () => {
   const [lastPlayerChoice, setLastPlayerChoice] = useState<string | null>(null);
   const [retryActionCallback, setRetryActionCallback] = useState<(() => void) | null>(null);
 
-useEffect(() => {
-  // Vite exposes env variables starting with VITE_ to import.meta.env
-  // For local dev, process.env.GEMINI_API_KEY is defined by vite.config.ts
-  const keyFromImportMeta = import.meta.env.VITE_GEMINI_API_KEY;
-  const keyFromProcessEnv = process.env.GEMINI_API_KEY; // This is what your vite.config.ts sets up
+  useEffect(() => {
+    // Check for API key from environment (for local dev)
+    const keyFromImportMeta = import.meta.env.VITE_GEMINI_API_KEY;
+    const keyFromProcessEnv = process.env.GEMINI_API_KEY;
 
-  let effectiveApiKey = null;
+    let effectiveApiKey = null;
 
-  if (typeof keyFromImportMeta === 'string' && keyFromImportMeta.trim() !== '') {
-    effectiveApiKey = keyFromImportMeta;
-  } else if (typeof keyFromProcessEnv === 'string' && keyFromProcessEnv.trim() !== '') {
-    // This will be used during `npm run dev` if GEMINI_API_KEY is in your .env file
-    effectiveApiKey = keyFromProcessEnv;
-  }
-  
-  if (!effectiveApiKey) {
-    setErrorMessage("API_KEY environment variable not found or not passed correctly during build. This application requires a valid Google Gemini API key to function.");
-    setGameState(GameState.API_KEY_MISSING);
-    setRetryActionCallback(null); 
-  } else {
-    setApiKey(effectiveApiKey);
+    if (typeof keyFromImportMeta === 'string' && keyFromImportMeta.trim() !== '') {
+      effectiveApiKey = keyFromImportMeta;
+    } else if (typeof keyFromProcessEnv === 'string' && keyFromProcessEnv.trim() !== '') {
+      effectiveApiKey = keyFromProcessEnv;
+    }
+    
+    if (effectiveApiKey) {
+      // Developer mode - has built-in API key
+      setApiKey(effectiveApiKey);
+      setGameState(GameState.START_SCREEN);
+    } else {
+      // Production mode - user needs to provide key
+      setGameState(GameState.API_KEY_INPUT);
+    }
+  }, []);
+
+  const handleApiKeySubmit = useCallback((userApiKey: string) => {
+    setApiKey(userApiKey);
     setGameState(GameState.START_SCREEN);
-  }
-}, []);
+  }, []);
 
   const handleFatalError = useCallback((message: string, specificRetryAction?: () => void) => {
     setErrorMessage(message);
@@ -63,8 +67,6 @@ useEffect(() => {
     if (specificRetryAction) {
       setRetryActionCallback(() => specificRetryAction);
     } else {
-      // Default retry for fatal errors is usually starting a new game,
-      // but let's make it more specific if possible or nullify if no clear action.
       setRetryActionCallback(specificRetryAction ? () => specificRetryAction : () => triggerStartGame);
     }
   }, []); 
@@ -130,7 +132,7 @@ useEffect(() => {
     }
     setGameState(GameState.LOADING_STORY);
     setErrorMessage(null);
-    await new Promise(resolve => setTimeout(resolve, 50)); // Brief delay for UI update
+    await new Promise(resolve => setTimeout(resolve, 50));
     const parsedData = parseGeminiResponse(cachedRawResponse);
 
     if (parsedData) {
@@ -146,7 +148,7 @@ useEffect(() => {
 
   const triggerStartGame = useCallback(async () => {
     if (!apiKey) {
-      handleFatalError("API Key is not available.", undefined); // No specific retry for this
+      handleFatalError("API Key is not available.", undefined);
       return;
     }
     setGameState(GameState.LOADING_STORY);
@@ -245,6 +247,8 @@ useEffect(() => {
 
   const renderContent = () => {
     switch (gameState) {
+      case GameState.API_KEY_INPUT:
+        return <ApiKeyInput onSubmit={handleApiKeySubmit} />;
       case GameState.API_KEY_MISSING:
         return <ErrorDisplay message={errorMessage!} onRetry={retryActionCallback || undefined} />;
       case GameState.START_SCREEN:
