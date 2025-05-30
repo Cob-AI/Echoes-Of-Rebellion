@@ -1,6 +1,6 @@
 
 // API Model Names
-export const GEMINI_MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
+export const GEMINI_MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
 export const IMAGEN_MODEL_NAME = 'imagen-3.0-generate-002';
 // Fallback Imagen model is not used per user request to simplify.
 
