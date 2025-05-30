@@ -9,7 +9,7 @@ RUN npm install -g esbuild
 COPY . .
 
 # This ARG will receive the API key from Cloud Build at build time
-ARG API_KEY_ARG
+ARG _API_KEY_ARG
 
 # Run esbuild to bundle index.tsx into bundle.js
 # It replaces process.env.API_KEY with the actual key value.
