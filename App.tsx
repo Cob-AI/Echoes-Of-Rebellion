@@ -33,18 +33,30 @@ const App: React.FC = () => {
   const [lastPlayerChoice, setLastPlayerChoice] = useState<string | null>(null);
   const [retryActionCallback, setRetryActionCallback] = useState<(() => void) | null>(null);
 
+useEffect(() => {
+  // Vite exposes env variables starting with VITE_ to import.meta.env
+  // For local dev, process.env.GEMINI_API_KEY is defined by vite.config.ts
+  const keyFromImportMeta = import.meta.env.VITE_GEMINI_API_KEY;
+  const keyFromProcessEnv = process.env.GEMINI_API_KEY; // This is what your vite.config.ts sets up
 
-  useEffect(() => {
-    const key = process.env.API_KEY;
-    if (!key) {
-      setErrorMessage("API_KEY environment variable not found. This application requires a valid Google Gemini API key to function.");
-      setGameState(GameState.API_KEY_MISSING);
-       setRetryActionCallback(null); 
-    } else {
-      setApiKey(key);
-      setGameState(GameState.START_SCREEN);
-    }
-  }, []);
+  let effectiveApiKey = null;
+
+  if (typeof keyFromImportMeta === 'string' && keyFromImportMeta.trim() !== '') {
+    effectiveApiKey = keyFromImportMeta;
+  } else if (typeof keyFromProcessEnv === 'string' && keyFromProcessEnv.trim() !== '') {
+    // This will be used during `npm run dev` if GEMINI_API_KEY is in your .env file
+    effectiveApiKey = keyFromProcessEnv;
+  }
+  
+  if (!effectiveApiKey) {
+    setErrorMessage("API_KEY environment variable not found or not passed correctly during build. This application requires a valid Google Gemini API key to function.");
+    setGameState(GameState.API_KEY_MISSING);
+    setRetryActionCallback(null); 
+  } else {
+    setApiKey(effectiveApiKey);
+    setGameState(GameState.START_SCREEN);
+  }
+}, []);
 
   const handleFatalError = useCallback((message: string, specificRetryAction?: () => void) => {
     setErrorMessage(message);
