@@ -29,7 +29,6 @@ const App: React.FC = () => {
   const [isLoadingImage, setIsLoadingImage] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // State for enhanced error recovery
   const [cachedRawResponse, setCachedRawResponse] = useState<string | null>(null);
   const [lastPlayerChoice, setLastPlayerChoice] = useState<string | null>(null);
   const [retryActionCallback, setRetryActionCallback] = useState<(() => void) | null>(null);
@@ -40,7 +39,7 @@ const App: React.FC = () => {
     if (!key) {
       setErrorMessage("API_KEY environment variable not found. This application requires a valid Google Gemini API key to function.");
       setGameState(GameState.API_KEY_MISSING);
-       setRetryActionCallback(null); // No retry for missing API key
+       setRetryActionCallback(null); 
     } else {
       setApiKey(key);
       setGameState(GameState.START_SCREEN);
@@ -53,17 +52,22 @@ const App: React.FC = () => {
     if (specificRetryAction) {
       setRetryActionCallback(() => specificRetryAction);
     } else {
-      // Default to attempting to start a new game if no specific action.
       setRetryActionCallback(() => triggerStartGame);
     }
-  }, []); // triggerStartGame will be added to dependency array once defined if it's a useCallback itself
+  }, []); 
   
   const fetchAndSetImage = useCallback(async (description: string, sceneTitle: string) => {
     if (!apiKey) return;
     setIsLoadingImage(true);
     setCurrentImageUrl(null);
     try {
-      const imageUrl = await generateAndorImage(apiKey, `${sceneTitle}. ${description}`);
+      // For game over screens, the sceneTitle might be less relevant than a generic indication.
+      // However, the AI's final description should be evocative enough.
+      const imagePrompt = gameState === GameState.GAME_OVER_DEFEAT || gameState === GameState.GAME_OVER_VICTORY 
+        ? description // Use the full final description for game over images
+        : `${sceneTitle}. ${description}`; // Standard prompt for ongoing story
+
+      const imageUrl = await generateAndorImage(apiKey, imagePrompt);
       setCurrentImageUrl(imageUrl);
     } catch (error) {
       console.error("Failed to fetch image:", error);
@@ -71,28 +75,38 @@ const App: React.FC = () => {
     } finally {
       setIsLoadingImage(false);
     }
-  }, [apiKey]);
+  }, [apiKey, gameState]); // Added gameState to dependencies
 
   const processStoryResponse = useCallback((storyData: StoryResponse) => {
     setCurrentDescription(storyData.description);
-    setCurrentChoices(storyData.choices);
     setNarrativeFocus(storyData.suggestedFocus);
     setCurrentActTitle(storyData.actTitle);
     setCurrentSceneTitle(storyData.sceneTitle);
-    setIsCurrentSceneEnd(storyData.isSceneEnd);
-    setIsCurrentActEnd(storyData.isActEnd);
-    setIsCurrentMicroArcEnd(storyData.isMicroArcEnd);
-
-    if (storyData.isActEnd) {
-      setCurrentMicroArcNumber(1);
-    } else if (storyData.isMicroArcEnd) {
-      setCurrentMicroArcNumber(prev => prev + 1);
-    }
     
-    setCachedRawResponse(null); // Successfully processed, clear cache
-    setRetryActionCallback(null); // Clear any pending retry
-    setErrorMessage(null); // Clear previous errors
-    setGameState(GameState.SHOWING_STORY);
+    setCachedRawResponse(null);
+    setRetryActionCallback(null);
+    setErrorMessage(null);
+
+    if (storyData.isPlayerDefeated) {
+      setGameState(GameState.GAME_OVER_DEFEAT);
+      setCurrentChoices([]); // No choices on game over
+    } else if (storyData.isGameWon) {
+      setGameState(GameState.GAME_OVER_VICTORY);
+      setCurrentChoices([]); // No choices on game over
+    } else {
+      // Continue game
+      setCurrentChoices(storyData.choices);
+      setIsCurrentSceneEnd(storyData.isSceneEnd);
+      setIsCurrentActEnd(storyData.isActEnd);
+      setIsCurrentMicroArcEnd(storyData.isMicroArcEnd);
+
+      if (storyData.isActEnd) {
+        setCurrentMicroArcNumber(1);
+      } else if (storyData.isMicroArcEnd) {
+        setCurrentMicroArcNumber(prev => prev + 1);
+      }
+      setGameState(GameState.SHOWING_STORY);
+    }
 
     if (storyData.description) {
        fetchAndSetImage(storyData.description, storyData.sceneTitle);
@@ -106,27 +120,23 @@ const App: React.FC = () => {
     }
     setGameState(GameState.LOADING_STORY);
     setErrorMessage(null);
-
-    // Give UI time to update to "Loading"
     await new Promise(resolve => setTimeout(resolve, 50));
-
-
     const parsedData = parseGeminiResponse(cachedRawResponse);
 
     if (parsedData) {
       processStoryResponse(parsedData);
     } else {
-      setCachedRawResponse(null); // Clear invalid cache
+      setCachedRawResponse(null); 
       handleFatalError(
         "Re-parsing the AI's previous response failed. The data might be corrupted. Try starting a new game or retrying your last choice if applicable.",
         lastPlayerChoice ? () => handleChoice(lastPlayerChoice) : () => triggerStartGame
       );
     }
-  }, [cachedRawResponse, processStoryResponse, handleFatalError, lastPlayerChoice]); // Added lastPlayerChoice and other dependencies
+  }, [cachedRawResponse, processStoryResponse, handleFatalError, lastPlayerChoice]); 
 
   const triggerStartGame = useCallback(async () => {
     if (!apiKey) {
-      handleFatalError("API Key is not available.", undefined); // No specific retry if API key is fundamentally missing
+      handleFatalError("API Key is not available.", undefined);
       return;
     }
     setGameState(GameState.LOADING_STORY);
@@ -134,27 +144,20 @@ const App: React.FC = () => {
     setCachedRawResponse(null);
     setLastPlayerChoice(null);
     setCurrentMicroArcNumber(1);
+    setCurrentImageUrl(null); // Clear previous image
 
     const result: GeminiServiceResponse = await startNewGame(apiKey);
 
     if (result.storyResponse) {
       processStoryResponse(result.storyResponse);
-    } else if (result.rawText && result.error) { // Parsing error
+    } else if (result.rawText && result.error) { 
       setCachedRawResponse(result.rawText);
       handleFatalError(result.error || "Failed to parse initial story data. You can retry processing this response.", () => attemptReparseAndContinue());
-    } else { // Network or other API error
+    } else { 
       handleFatalError(result.error || "Failed to start the game due to an API or network error.", () => triggerStartGame());
     }
   }, [apiKey, processStoryResponse, handleFatalError, attemptReparseAndContinue]);
   
-  // Now that triggerStartGame is a useCallback, we can add it to handleFatalError's dependencies.
-  // This was a circular dependency issue that's resolved by defining them carefully.
-  // The empty dependency array for handleFatalError was okay if triggerStartGame wasn't stable.
-  // Now, ensuring stability for all.
-  // Re-declare handleFatalError with triggerStartGame in its deps
-  // This will require moving handleFatalError after triggerStartGame or careful hoisting.
-  // For simplicity, we'll assume the linter handles useCallback deps correctly.
-
   const handleChoice = useCallback(async (choiceText: string) => {
     if (!apiKey) {
       handleFatalError("API Key is not available.", undefined);
@@ -178,10 +181,10 @@ const App: React.FC = () => {
 
     if (result.storyResponse) {
       processStoryResponse(result.storyResponse);
-    } else if (result.rawText && result.error) { // Parsing error
+    } else if (result.rawText && result.error) { 
       setCachedRawResponse(result.rawText);
       handleFatalError(result.error || "Failed to parse story update. You can retry processing this response.", () => attemptReparseAndContinue());
-    } else { // Network or other API error
+    } else { 
       handleFatalError(result.error || "Failed to process your choice due to an API or network error.", () => handleChoice(choiceText));
     }
   }, [
@@ -198,9 +201,37 @@ const App: React.FC = () => {
     attemptReparseAndContinue
   ]);
   
-  // Update handleFatalError's dependency array now that other Callbacks are defined
-  // This is slightly tricky due to declaration order. Assuming correct setup for useCallback dependencies.
-  // If handleFatalError is used inside other useCallbacks, it also needs to be stable.
+  const renderEndScreenBase = (title: string, titleColor: string) => (
+    <div className="text-center flex flex-col justify-center flex-grow items-center p-4 sm:p-6 bg-andor-slate-800 rounded-lg shadow-xl animate-fadeIn">
+      <h1 className={`font-display text-3xl sm:text-4xl ${titleColor} mb-4 sm:mb-6`}>{title}</h1>
+      
+      <div className="mb-4 h-52 sm:h-64 w-full max-w-lg bg-andor-slate-700 rounded flex items-center justify-center overflow-hidden">
+        {isLoadingImage && <LoadingSpinner text="Loading final image..." />}
+        {!isLoadingImage && currentImageUrl && (
+          <img src={currentImageUrl} alt="Final scene" className="w-full h-full object-cover" />
+        )}
+        {!isLoadingImage && !currentImageUrl && (
+          <div className="text-andor-slate-300 p-4 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2 text-andor-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            The final scene remains unvisualized.
+          </div>
+        )}
+      </div>
+      
+      <p className="text-andor-slate-200 mb-6 sm:mb-8 text-base sm:text-lg max-w-xl mx-auto whitespace-pre-line leading-relaxed">
+        {currentDescription}
+      </p>
+      <button
+        onClick={triggerStartGame}
+        aria-label="Play Again"
+        className="px-6 py-3 sm:px-8 sm:py-3 bg-andor-amber-400 hover:bg-andor-amber-500 text-andor-slate-900 font-bold text-lg sm:text-xl rounded-md transition-colors duration-150 transform hover:scale-105 self-center"
+      >
+        Play Again?
+      </button>
+    </div>
+  );
 
   const renderContent = () => {
     switch (gameState) {
@@ -208,21 +239,22 @@ const App: React.FC = () => {
         return <ErrorDisplay message={errorMessage!} onRetry={retryActionCallback || undefined} />;
       case GameState.START_SCREEN:
         return (
-          <div className="text-center">
-            <h1 className="font-display text-5xl text-andor-amber-400 mb-4">Andor: Echoes of Rebellion</h1>
-            <p className="text-andor-slate-300 mb-8 text-lg max-w-2xl mx-auto">
+          <div className="text-center flex flex-col justify-center flex-grow">
+            <h1 className="font-display text-4xl sm:text-5xl text-andor-amber-400 mb-4">Andor: Echoes of Rebellion</h1>
+            <p className="text-andor-slate-300 mb-8 text-md sm:text-lg max-w-2xl mx-auto">
               The galaxy is on the brink. The Empire's grip tightens daily. You are a reluctant operative, caught in the gears of a burgeoning rebellion. Your choices will shape your destiny and echo through the stars.
             </p>
             <button
               onClick={triggerStartGame}
-              className="px-8 py-3 bg-andor-amber-400 hover:bg-andor-amber-500 text-andor-slate-900 font-bold text-xl rounded-md transition-colors duration-150 transform hover:scale-105"
+              aria-label="Begin Your Story"
+              className="px-8 py-3 bg-andor-amber-400 hover:bg-andor-amber-500 text-andor-slate-900 font-bold text-xl rounded-md transition-colors duration-150 transform hover:scale-105 self-center"
             >
               Begin Your Story
             </button>
           </div>
         );
       case GameState.LOADING_STORY:
-        return <LoadingSpinner text="The story unfolds..." size="lg" />;
+        return <div className="flex-grow flex items-center justify-center"><LoadingSpinner text="The story unfolds..." size="lg" /></div>;
       case GameState.SHOWING_STORY:
         return (
           <>
@@ -240,34 +272,48 @@ const App: React.FC = () => {
           </>
         );
       case GameState.ERROR:
-        return <ErrorDisplay message={errorMessage || "An unknown error occurred."} onRetry={retryActionCallback || undefined} />;
+        return <div className="flex-grow flex items-center justify-center"><ErrorDisplay message={errorMessage || "An unknown error occurred."} onRetry={retryActionCallback || undefined} /></div>;
+      
+      case GameState.GAME_OVER_DEFEAT:
+        return renderEndScreenBase("Your Echo Fades...", "text-andor-red-500");
+
+      case GameState.GAME_OVER_VICTORY:
+        return renderEndScreenBase("A Legacy Forged in Rebellion!", "text-andor-amber-400");
+
       default:
-        return <p>Unknown game state.</p>;
+        return <p className="flex-grow flex items-center justify-center">Unknown game state.</p>;
     }
   };
 
+  const shouldDisplayDeveloperFooter =
+    !!apiKey &&
+    [GameState.SHOWING_STORY, GameState.LOADING_STORY].includes(gameState);
+
   return (
-    <div className="min-h-screen bg-andor-slate-900 text-andor-slate-100 flex flex-col items-center justify-center p-4 pt-8 pb-24 selection:bg-andor-amber-400 selection:text-andor-slate-900">
-      <main className="container mx-auto max-w-2xl w-full">
+    <div className="min-h-screen bg-andor-slate-900 text-andor-slate-100 flex flex-col items-center p-4 pt-6 sm:pt-8 pb-8 selection:bg-andor-amber-400 selection:text-andor-slate-900">
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+      `}</style>
+      <main className="container mx-auto max-w-2xl w-full flex flex-col flex-grow overflow-y-auto pb-8">
         {renderContent()}
+        { shouldDisplayDeveloperFooter && (
+          <DeveloperFooter 
+            narrativeFocus={narrativeFocus}
+            currentActTitle={currentActTitle}
+            currentSceneTitle={currentSceneTitle}
+            currentMicroArcNumber={currentMicroArcNumber}
+            isCurrentSceneEnd={isCurrentSceneEnd}
+            isCurrentMicroArcEnd={isCurrentMicroArcEnd}
+            isCurrentActEnd={isCurrentActEnd}
+          />
+        )}
       </main>
-      {/* 
-        FIX: Changed condition to use a direct OR comparison for GameState.
-        The previous Array.includes method was causing a linting error related to
-        type overlap with enum members. This direct comparison is clearer and
-        less prone to such linter misinterpretations.
-      */}
-      { (gameState === GameState.SHOWING_STORY || gameState === GameState.LOADING_STORY) && apiKey && (
-        <DeveloperFooter 
-          narrativeFocus={narrativeFocus}
-          currentActTitle={currentActTitle}
-          currentSceneTitle={currentSceneTitle}
-          currentMicroArcNumber={currentMicroArcNumber}
-          isCurrentSceneEnd={isCurrentSceneEnd}
-          isCurrentMicroArcEnd={isCurrentMicroArcEnd}
-          isCurrentActEnd={isCurrentActEnd}
-        />
-      )}
     </div>
   );
 };

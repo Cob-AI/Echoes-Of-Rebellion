@@ -20,7 +20,7 @@ const StatusPill: React.FC<{label: string; value: string | number | boolean}> = 
 
 const DeveloperFooter: React.FC<DeveloperFooterProps> = (props) => {
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-andor-slate-800/80 backdrop-blur-sm p-2 text-xs text-andor-slate-300 border-t border-andor-slate-700 shadow-lg">
+    <footer className="bg-andor-slate-800/80 p-2 text-xs text-andor-slate-300 border-t border-andor-slate-700 mt-12"> {/* Removed fixed positioning, added margin-top */}
       <div className="container mx-auto max-w-4xl">
         <p className="font-bold text-andor-amber-400 mb-1">Dev Info:</p>
         <div>

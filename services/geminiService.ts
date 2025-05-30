@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { RawStoryResponse, StoryResponse, Choice } from '../types';
 import { GEMINI_MODEL_NAME, INITIAL_SYSTEM_PROMPT, CONTINUE_GAME_USER_PROMPT_TEMPLATE } from '../constants';
@@ -30,9 +31,10 @@ export const parseGeminiResponse = (rawJson: string): StoryResponse | null => {
   try {
     const rawResponse: RawStoryResponse = JSON.parse(cleanedJson);
 
+    // Validate core fields
     if (
       typeof rawResponse.description !== 'string' ||
-      !Array.isArray(rawResponse.choices) ||
+      !Array.isArray(rawResponse.choices) || // Choices can be empty on game end
       !rawResponse.choices.every(c => typeof c === 'string') ||
       typeof rawResponse.suggestedFocus !== 'string' ||
       typeof rawResponse.actTitle !== 'string' ||
@@ -41,19 +43,33 @@ export const parseGeminiResponse = (rawJson: string): StoryResponse | null => {
       typeof rawResponse.isActEnd !== 'boolean' ||
       typeof rawResponse.isMicroArcEnd !== 'boolean'
     ) {
-      console.error("Parsed Gemini response has incorrect structure:", rawResponse);
-      // Return null instead of throwing, error will be in GeminiServiceResponse
+      console.error("Parsed Gemini response has incorrect core structure:", rawResponse);
       return null; 
     }
-    
+
+    // Validate optional game end flags
+    const isPlayerDefeated = typeof rawResponse.isPlayerDefeated === 'boolean' ? rawResponse.isPlayerDefeated : false;
+    const isGameWon = typeof rawResponse.isGameWon === 'boolean' ? rawResponse.isGameWon : false;
+
+    // Ensure exactly 3 choices, unless game has ended.
     let finalChoices = rawResponse.choices;
-    if (finalChoices.length < 3) {
-        console.warn("AI provided fewer than 3 choices. Padding choices.");
-        while(finalChoices.length < 3) finalChoices.push("Consider your next move carefully.");
-    } else if (finalChoices.length > 4) {
-        console.warn("AI provided more than 4 choices. Truncating choices.");
-        finalChoices = finalChoices.slice(0, 4);
+    if (!isPlayerDefeated && !isGameWon) {
+        if (finalChoices.length < 3 && finalChoices.length > 0) { 
+            console.warn(`AI provided ${finalChoices.length} choices. Padding to 3 choices.`);
+            while(finalChoices.length < 3) finalChoices.push("Consider your next move carefully.");
+        } else if (finalChoices.length > 3) {
+            console.warn(`AI provided ${finalChoices.length} choices. Truncating to 3 choices.`);
+            finalChoices = finalChoices.slice(0, 3);
+        } else if (finalChoices.length === 0) { // Should not happen if game not over
+             console.warn("AI provided 0 choices while game is ongoing. Padding to 3 choices.");
+             finalChoices = [
+                "Proceed cautiously.",
+                "Assess the situation.",
+                "Look for opportunities."
+             ];
+        }
     }
+
 
     const processedChoices: Choice[] = finalChoices.map((text, index) => ({
       id: `choice-${Date.now()}-${index}`,
@@ -61,8 +77,16 @@ export const parseGeminiResponse = (rawJson: string): StoryResponse | null => {
     }));
 
     return {
-      ...rawResponse,
+      description: rawResponse.description,
       choices: processedChoices,
+      suggestedFocus: rawResponse.suggestedFocus,
+      actTitle: rawResponse.actTitle,
+      sceneTitle: rawResponse.sceneTitle,
+      isSceneEnd: rawResponse.isSceneEnd,
+      isActEnd: rawResponse.isActEnd,
+      isMicroArcEnd: rawResponse.isMicroArcEnd,
+      isPlayerDefeated,
+      isGameWon,
     };
   } catch (error) {
     console.error("Failed to parse Gemini response:", error, "Raw JSON:", rawJson);

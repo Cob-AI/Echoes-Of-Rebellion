@@ -14,6 +14,8 @@ export interface RawStoryResponse {
   isSceneEnd: boolean;
   isActEnd: boolean;
   isMicroArcEnd: boolean;
+  isPlayerDefeated?: boolean; // Optional: player is defeated
+  isGameWon?: boolean;       // Optional: player achieves victory
 }
 
 // Processed story response used within the application
@@ -26,6 +28,8 @@ export interface StoryResponse {
   isSceneEnd: boolean;
   isActEnd: boolean;
   isMicroArcEnd: boolean;
+  isPlayerDefeated: boolean; // Non-optional after processing, defaults to false
+  isGameWon: boolean;       // Non-optional after processing, defaults to false
 }
 
 export enum GameState {
@@ -34,6 +38,8 @@ export enum GameState {
   SHOWING_STORY,
   ERROR,
   API_KEY_MISSING,
+  GAME_OVER_DEFEAT,
+  GAME_OVER_VICTORY,
 }
 
 // For Gemini Chat (simplified)

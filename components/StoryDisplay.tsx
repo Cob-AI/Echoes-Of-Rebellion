@@ -13,7 +13,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ description, imageUrl, isLo
   return (
     <div className="bg-andor-slate-800 p-6 rounded-lg shadow-xl mb-6">
       <h2 className="font-display text-2xl text-andor-amber-400 mb-3">{sceneTitle}</h2>
-      <div className="mb-4 h-64 w-full bg-andor-slate-700 rounded flex items-center justify-center overflow-hidden">
+      <div className="mb-4 h-52 sm:h-64 w-full bg-andor-slate-700 rounded flex items-center justify-center overflow-hidden"> {/* Adjusted height for mobile */}
         {isLoadingImage && <LoadingSpinner text="Generating scene visualization..." />}
         {!isLoadingImage && imageUrl && (
           <img src={imageUrl} alt={sceneTitle || 'Scene visual'} className="w-full h-full object-cover" />
