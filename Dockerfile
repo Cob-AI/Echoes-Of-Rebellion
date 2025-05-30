@@ -14,7 +14,8 @@ ARG _API_KEY_ARG
 # Run esbuild to bundle index.tsx into bundle.js
 # It replaces process.env.API_KEY with the actual key value.
 # Dependencies handled by the import map in index.html are marked as external.
-RUN esbuild index.tsx --bundle --outfile=dist/bundle.js \
+RUN echo "DEBUG: Value of _API_KEY_ARG is '$_API_KEY_ARG'" && \
+    esbuild index.tsx --bundle --outfile=dist/bundle.js \
     --define:process.env.API_KEY="\"$_API_KEY_ARG\"" \
     --loader:.ts=tsx \
     --platform=browser \
