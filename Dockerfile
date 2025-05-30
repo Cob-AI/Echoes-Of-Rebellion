@@ -18,6 +18,7 @@ RUN esbuild index.tsx --bundle --outfile=dist/bundle.js \
     --define:process.env.API_KEY="\"$API_KEY_ARG\"" \
     --loader:.ts=tsx \
     --platform=browser \
+    --format=esm \  # <--- ADD THIS LINE
     --external:react \
     --external:react-dom \
     --external:@google/genai
