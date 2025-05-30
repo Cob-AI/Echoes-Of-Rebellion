@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { GameState, Choice, StoryResponse } from './types';
 import { startNewGame, sendChoiceAndGetResponse, parseGeminiResponse, GeminiServiceResponse } from './services/geminiService';
@@ -301,7 +300,7 @@ useEffect(() => {
     !!apiKey && relevantStatesForFooter.includes(gameState);
 
   return (
-    <div className="min-h-screen bg-andor-slate-900 text-andor-slate-100 flex flex-col items-center p-4 pt-6 sm:pt-8 pb-8 selection:bg-andor-amber-400 selection:text-andor-slate-900">
+    <div className="min-h-screen bg-andor-slate-900 text-andor-slate-100 flex flex-col items-center p-4 pt-6 sm:pt-8 pb-8 selection:bg-andor-amber-400 selection:text-andor-slate-900 overflow-x-hidden">
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
@@ -311,7 +310,7 @@ useEffect(() => {
           animation: fadeIn 0.5s ease-out forwards;
         }
       `}</style>
-      <main className="container mx-auto max-w-2xl w-full flex flex-col flex-grow overflow-y-auto pb-8">
+      <main className="container mx-auto max-w-2xl w-full flex flex-col flex-grow pb-8">
         {renderContent()}
         { shouldDisplayDeveloperFooter && (
           <DeveloperFooter 
