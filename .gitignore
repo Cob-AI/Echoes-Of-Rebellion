@@ -1,3 +1,7 @@
+.git
+.gitignore
+Dockerfile
+
 # Environment variables - VERY IMPORTANT
 .env
 *.env

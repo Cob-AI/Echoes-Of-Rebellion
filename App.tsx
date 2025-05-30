@@ -52,7 +52,9 @@ const App: React.FC = () => {
     if (specificRetryAction) {
       setRetryActionCallback(() => specificRetryAction);
     } else {
-      setRetryActionCallback(() => triggerStartGame);
+      // Default retry for fatal errors is usually starting a new game,
+      // but let's make it more specific if possible or nullify if no clear action.
+      setRetryActionCallback(specificRetryAction ? () => specificRetryAction : () => triggerStartGame);
     }
   }, []); 
   
@@ -61,11 +63,9 @@ const App: React.FC = () => {
     setIsLoadingImage(true);
     setCurrentImageUrl(null);
     try {
-      // For game over screens, the sceneTitle might be less relevant than a generic indication.
-      // However, the AI's final description should be evocative enough.
       const imagePrompt = gameState === GameState.GAME_OVER_DEFEAT || gameState === GameState.GAME_OVER_VICTORY 
-        ? description // Use the full final description for game over images
-        : `${sceneTitle}. ${description}`; // Standard prompt for ongoing story
+        ? description 
+        : `${sceneTitle}. ${description}`; 
 
       const imageUrl = await generateAndorImage(apiKey, imagePrompt);
       setCurrentImageUrl(imageUrl);
@@ -75,7 +75,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoadingImage(false);
     }
-  }, [apiKey, gameState]); // Added gameState to dependencies
+  }, [apiKey, gameState]); 
 
   const processStoryResponse = useCallback((storyData: StoryResponse) => {
     setCurrentDescription(storyData.description);
@@ -89,12 +89,11 @@ const App: React.FC = () => {
 
     if (storyData.isPlayerDefeated) {
       setGameState(GameState.GAME_OVER_DEFEAT);
-      setCurrentChoices([]); // No choices on game over
+      setCurrentChoices([]); 
     } else if (storyData.isGameWon) {
       setGameState(GameState.GAME_OVER_VICTORY);
-      setCurrentChoices([]); // No choices on game over
+      setCurrentChoices([]); 
     } else {
-      // Continue game
       setCurrentChoices(storyData.choices);
       setIsCurrentSceneEnd(storyData.isSceneEnd);
       setIsCurrentActEnd(storyData.isActEnd);
@@ -120,7 +119,7 @@ const App: React.FC = () => {
     }
     setGameState(GameState.LOADING_STORY);
     setErrorMessage(null);
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 50)); // Brief delay for UI update
     const parsedData = parseGeminiResponse(cachedRawResponse);
 
     if (parsedData) {
@@ -136,7 +135,7 @@ const App: React.FC = () => {
 
   const triggerStartGame = useCallback(async () => {
     if (!apiKey) {
-      handleFatalError("API Key is not available.", undefined);
+      handleFatalError("API Key is not available.", undefined); // No specific retry for this
       return;
     }
     setGameState(GameState.LOADING_STORY);
@@ -144,7 +143,7 @@ const App: React.FC = () => {
     setCachedRawResponse(null);
     setLastPlayerChoice(null);
     setCurrentMicroArcNumber(1);
-    setCurrentImageUrl(null); // Clear previous image
+    setCurrentImageUrl(null); 
 
     const result: GeminiServiceResponse = await startNewGame(apiKey);
 
@@ -285,9 +284,9 @@ const App: React.FC = () => {
     }
   };
 
+  const relevantStatesForFooter: GameState[] = [GameState.SHOWING_STORY, GameState.LOADING_STORY];
   const shouldDisplayDeveloperFooter =
-    !!apiKey &&
-    [GameState.SHOWING_STORY, GameState.LOADING_STORY].includes(gameState);
+    !!apiKey && relevantStatesForFooter.includes(gameState);
 
   return (
     <div className="min-h-screen bg-andor-slate-900 text-andor-slate-100 flex flex-col items-center p-4 pt-6 sm:pt-8 pb-8 selection:bg-andor-amber-400 selection:text-andor-slate-900">
