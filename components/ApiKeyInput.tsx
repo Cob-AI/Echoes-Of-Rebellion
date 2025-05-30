@@ -43,7 +43,7 @@ const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ onSubmit }) => {
           <ol className="list-decimal list-inside space-y-2 text-andor-slate-200 text-sm">
             <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-andor-amber-400 hover:text-andor-amber-300 underline">Google AI Studio</a></li>
             <li>Click "Get API key" button</li>
-            <li>Choose "Create API key in new project" (or select existing project)</li>
+            <li>Choose "Create API key in new project" (or select key within existing project)</li>
             <li>Copy the API key that appears</li>
             <li>Paste it below and click "Start Game"</li>
           </ol>
