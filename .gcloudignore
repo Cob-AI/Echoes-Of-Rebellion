@@ -1,46 +1,9 @@
 .git
 .gitignore
 Dockerfile
-
-# Environment variables - VERY IMPORTANT
-.env
-*.env
-*.env.*
-!.env.example
-
-# Node.js
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-yarn.lock
-
-# Build output
 dist/
-build/
-out/
-
-# IDE / Editor specific
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Logs (from your existing file, good to keep these general log ignores too)
-logs
 *.log
-pnpm-debug.log*
-lerna-debug.log*
+.DS_Store
+.env*
+!/.env.example
