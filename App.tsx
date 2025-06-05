@@ -277,18 +277,18 @@ const App: React.FC = () => {
       case GameState.SHOWING_STORY:
         return (
           <>
-            <StoryDisplay
-              description={currentDescription}
-              imageUrl={currentImageUrl}
-              isLoadingImage={isLoadingImage}
-              sceneTitle={currentSceneTitle}
-            />
-            <div className="mt-6 space-y-3">
-              {currentChoices.map((choice) => (
-                <ChoiceButton key={choice.id} choice={choice} onClick={handleChoice} disabled={gameState === GameState.LOADING_STORY} />
-              ))}
-            </div>
-          </>
+          <StoryDisplay
+            description={currentDescription}
+            imageUrl={currentImageUrl}
+            isLoadingImage={isLoadingImage}
+            sceneTitle={currentSceneTitle}
+          />
+          <div className="mt-2 flex flex-col gap-1">
+            {currentChoices.map((choice) => (
+              <ChoiceButton key={choice.id} choice={choice} onClick={handleChoice} disabled={gameState === GameState.LOADING_STORY} />
+            ))}
+          </div>
+        </>
         );
       case GameState.ERROR:
         return <div className="flex-grow flex items-center justify-center"><ErrorDisplay message={errorMessage || "An unknown error occurred."} onRetry={retryActionCallback || undefined} /></div>;

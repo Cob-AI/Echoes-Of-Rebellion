@@ -1,4 +1,3 @@
-
 import React from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -11,9 +10,9 @@ interface StoryDisplayProps {
 
 const StoryDisplay: React.FC<StoryDisplayProps> = ({ description, imageUrl, isLoadingImage, sceneTitle }) => {
   return (
-    <div className="bg-andor-slate-800 p-6 rounded-lg shadow-xl mb-6">
-      <h2 className="font-display text-2xl text-andor-amber-400 mb-3">{sceneTitle}</h2>
-      <div className="mb-4 h-52 sm:h-64 w-full bg-andor-slate-700 rounded flex items-center justify-center overflow-hidden"> {/* Adjusted height for mobile */}
+    <div className="bg-andor-slate-800 p-4 sm:p-5 rounded-lg shadow-xl mb-2">
+      <h2 className="font-display text-xl sm:text-2xl text-andor-amber-400 mb-2">{sceneTitle}</h2>
+      <div className="mb-3 h-48 sm:h-56 w-full bg-andor-slate-700 rounded flex items-center justify-center overflow-hidden">
         {isLoadingImage && <LoadingSpinner text="Generating scene visualization..." />}
         {!isLoadingImage && imageUrl && (
           <img src={imageUrl} alt={sceneTitle || 'Scene visual'} className="w-full h-full object-cover" />
@@ -27,7 +26,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ description, imageUrl, isLo
           </div>
         )}
       </div>
-      <p className="text-andor-slate-200 leading-relaxed whitespace-pre-line">{description}</p>
+      <p className="text-andor-slate-200 text-sm sm:text-base leading-relaxed whitespace-pre-line">{description}</p>
     </div>
   );
 };
