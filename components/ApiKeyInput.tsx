@@ -55,12 +55,9 @@ const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ onSubmit }) => {
             <li>Start playing! (Free AI-generated images included)</li>
           </ol>
           
-          <div className="mt-4 p-3 bg-andor-slate-600 rounded text-xs text-andor-slate-300">
-            <p className="font-semibold text-andor-amber-300 mb-1">✨ About Images:</p>
-            <p>• <strong>Free images</strong> are automatically included using AI generation</p>
-            <p>• <strong>Premium images</strong> available with optional OpenAI key ($0.04/image)</p>
-            <p className="mt-1 text-andor-slate-400">Your API key is only stored in this browser session.</p>
-          </div>
+          <p className="mt-3 text-xs text-andor-slate-400">
+            Your API key is only stored in this browser session.
+          </p>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -130,7 +127,7 @@ const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ onSubmit }) => {
         
         <p className="mt-4 text-xs text-andor-slate-400">
           <a href="https://ai.google.dev/pricing" target="_blank" rel="noopener noreferrer" className="hover:text-andor-amber-400 underline">
-            Gemini: Free tier includes 15 requests/minute
+            Gemini: Free tier includes 10 requests/minute, 500/day
           </a>
         </p>
       </div>
