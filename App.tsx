@@ -12,6 +12,7 @@ import ApiKeyInput from './components/ApiKeyInput';
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.START_SCREEN);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [openaiApiKey, setOpenaiApiKey] = useState<string | null>(null); 
 
   const [currentDescription, setCurrentDescription] = useState<string>('');
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
@@ -56,8 +57,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleApiKeySubmit = useCallback((userApiKey: string) => {
-    setApiKey(userApiKey);
+  const handleApiKeySubmit = useCallback((userGeminiKey: string, userOpenaiKey: string | null) => {
+    setApiKey(userGeminiKey);
+    setOpenaiApiKey(userOpenaiKey);
     setGameState(GameState.START_SCREEN);
   }, []);
 
@@ -73,14 +75,17 @@ const App: React.FC = () => {
   
   const fetchAndSetImage = useCallback(async (description: string, sceneTitle: string) => {
     if (!apiKey) return;
+    
     setIsLoadingImage(true);
     setCurrentImageUrl(null);
     try {
       const imagePrompt = gameState === GameState.GAME_OVER_DEFEAT || gameState === GameState.GAME_OVER_VICTORY 
         ? description 
-        : `${sceneTitle}. ${description}`; 
-
-      const imageUrl = await generateAndorImage(apiKey, imagePrompt);
+        : `${sceneTitle}. ${description}`;
+      
+      // Use our hybrid image service
+      const { generateGameImage } = await import('./services/imageService');
+      const imageUrl = await generateGameImage(imagePrompt, openaiApiKey);
       setCurrentImageUrl(imageUrl);
     } catch (error) {
       console.error("Failed to fetch image:", error);
@@ -88,7 +93,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoadingImage(false);
     }
-  }, [apiKey, gameState]); 
+  }, [apiKey, openaiApiKey, gameState]); 
 
   const processStoryResponse = useCallback((storyData: StoryResponse) => {
     setCurrentDescription(storyData.description);
@@ -121,7 +126,7 @@ const App: React.FC = () => {
     }
 
     if (storyData.description) {
-       fetchAndSetImage(storyData.description, storyData.sceneTitle);
+      fetchAndSetImage(storyData.description, storyData.sceneTitle);
     }
   }, [fetchAndSetImage]);
 
